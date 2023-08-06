@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        select, input, button {
+            display: block;
+            margin-bottom: 10px;
+            padding: 5px;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+            text-transform: uppercase; /* makes text capitalized */
+            font-weight: bold; /* makes text bold */
+        }
+
+        .product-row {
+            margin-bottom: 5px;
+        }
+
+        #total {
+            font-weight: bold;
+        }
+    </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@3.5.23/dist/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <h1>Product Total Price Calculator</h1>
+
+    <div id="products-container">
+        <!-- product rows will be added here dynamically -->
+    </div>
+
+    <button onclick="addProductRow()">Add Product</button>
+    <button onclick="calculateTotal()">Calculate Total</button>
+
+    <button onclick="downloadPDF()">Download as PDF</button>
+    <button onclick="downloadExcel()">Download as Excel</button>
+
+    <table id="products-table">
+        <thead>
+            <tr>
+                <th>Product</th>
+                <th>Quantity</th>
+                <th>Price (₹)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- table rows will be added here automatically -->
+        </tbody>
+        <tfoot>
+            <tr>
+                <td colspan="2">GST:</td>
+                <td id="gst">₹0</td>
+            </tr>
+            <tr>
+                <td colspan="2">Total:</td>
+                <td id="total-amount">₹0</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <script>
+        var products = [
+            {"name": "TVS XL SUPER 70-CC", "price": 250},
+            {"name": "HONDA ACTIVA OLD MODEL", "price": 400},
+            {"name": "HONDA DIO", "price": 400},
+            {"name": "TVS JUPITER", "price": 400},
+            {"name": "TVS WEGO", "price": 400},
+            {"name": "TVS XL 100-CC", "price": 480},
+            {"name": "HONDA ACTIVA NEW MODEL", "price": 500},
+            {"name": "TVS SCOOTY PEP", "price": 500},
+            {"name": "HERO MAESTRO", "price": 550},
+            {"name": "HONDA ACTIVA HET 2013", "price": 550},
+            {"name": "SUZUKI ACCESS 125 NEW MODEL", "price": 550},
+            {"name": "TVS NTORQ", "price": 550},
+            {"name": "YAMAHA RAY", "price": 550},
+            {"name": "HONDA ACTIVA 6G", "price": 580},
+            {"name": "SUZUKI ACCESS OLD MODEL", "price": 600}
+            // add more products here
+        ];
+
+        function createProductRow() {
+            var productRow = document.createElement("div");
+            productRow.classList.add("product-row");
+
+            var productSelect = document.createElement("select");
+            productSelect.classList.add("product");
+            products.forEach(function(product) {
+                var option = document.createElement("option");
+                option.value = product.price;
+                option.text = product.name;
+                productSelect.appendChild(option);
+            });
+
+            var quantityInput = document.createElement("input");
+            quantityInput.type = "number";
+            quantityInput.classList.add("quantity");
+            quantityInput.min = "1";
+            quantityInput.value = "1";
+
+            productRow.appendChild(productSelect);
+            productRow.appendChild(quantityInput);
+
+            return productRow;
+        }
+
+        function addProductRow() {
+            var productsContainer = document.getElementById("products-container");
+            var newProductRow = createProductRow();
+            productsContainer.appendChild(newProductRow);
+        }
+
+        function calculateTotal() {
+            var productRows = document.getElementsByClassName("product-row");
+            var total = 0;
+            var tableBody = document.querySelector("#products-table tbody");
+            tableBody.innerHTML = "";
+
+            for (var i = 0; i < productRows.length; i++) {
+                var productName = productRows[i].querySelector(".product").options[productRows[i].querySelector(".product").selectedIndex].text;
+                var productPrice = productRows[i].querySelector(".product").value;
+                var quantity = productRows[i].querySelector(".quantity").value;
+                var rowTotal = productPrice * quantity;
+                total += rowTotal;
+
+                var newRow = tableBody.insertRow();
+                var productNameCell = newRow.insertCell(0);
+                var quantityCell = newRow.insertCell(1);
+                var rowTotalCell = newRow.insertCell(2);
+
+                productNameCell.innerHTML = productName;
+                quantityCell.innerHTML = quantity;
+                rowTotalCell.innerHTML = "₹" + rowTotal;
+            }
+
+            document.getElementById("total-amount").innerHTML = "₹" + total;
+        }
+
+        function downloadPDF() {
+            var doc = new jsPDF.default();
+            var columns = ['Product', 'Quantity', 'Price (₹)'];
+            var data = [];
+
+            var productRows = document.getElementsByClassName("product-row");
+            for (var i = 0; i < productRows.length; i++) {
+                var productName = productRows[i].querySelector(".product").options[productRows[i].querySelector(".product").selectedIndex].text;
+                var productPrice = productRows[i].querySelector(".product").value;
+                var quantity = productRows[i].querySelector(".quantity").value;
+                data.push([productName, quantity, '₹' + productPrice * quantity]);
+            }
+
+            doc.autoTable({
+                head: [columns],
+                body: data,
+                foot: [['GST:', '', '₹0'], ['Total:', '', document.getElementById("total-amount").innerHTML]],
+                theme: 'grid'
+            });
+
+            doc.save('products.pdf');
+        }
+
+        function downloadExcel() {
+            var wb = XLSX.utils.book_new();
+            var ws = XLSX.utils.table_to_sheet(document.getElementById('products-table'));
+            XLSX.utils.book_append_sheet(wb, ws, "Products");
+            XLSX.writeFile(wb, 'products.xlsx');
+        }
+
+        // add an initial product row
+        addProductRow();
+    </script>
+
+</body>
+</html>
